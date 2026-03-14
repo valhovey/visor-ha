@@ -52,6 +52,8 @@ def build_sensors(mqtt_settings, device):
 
 
 def parse_json_line(line):
+    """Extract the first JSON object from a serial line, tolerating
+    leading garbage or concatenated trailing data."""
     text = line.decode(errors="replace").strip()
     start = text.find("{")
     if start == -1:
@@ -60,16 +62,22 @@ def parse_json_line(line):
     return obj
 
 
-def read_serial_json(port):
-    """Open a serial port, discard the first (possibly partial) line, and
-    return the next complete line parsed as JSON."""
+def read_serial_json(port, attempts=4):
+    """Read lines from a serial port until one parses as valid JSON.
+    The first line after a buffer flush is always discarded since it
+    may be a partial mid-transmission fragment."""
     with serial.Serial(port, BAUD, timeout=SERIAL_TIMEOUT) as ser:
         ser.reset_input_buffer()
         ser.readline()
-        line = ser.readline()
-        if not line:
-            raise TimeoutError(f"No data received from {port}")
-        return parse_json_line(line)
+        for _ in range(attempts):
+            line = ser.readline()
+            if not line:
+                raise TimeoutError(f"No data received from {port}")
+            try:
+                return parse_json_line(line)
+            except (ValueError, json.JSONDecodeError):
+                continue
+    raise ValueError(f"No valid JSON from {port} after {attempts} lines")
 
 
 def read_particulate(port):
@@ -81,24 +89,27 @@ def read_particulate(port):
     }
 
 
-def read_gas(port):
-    """Read CO2/temperature/humidity, retrying up to 3 times to skip the
-    initial zero-value reading the sensor sometimes emits on startup."""
+def read_gas(port, attempts=5):
+    """Read CO2/temperature/humidity.  Retries to skip both partial
+    serial lines and the initial zero-value startup readings."""
     with serial.Serial(port, BAUD, timeout=SERIAL_TIMEOUT) as ser:
         ser.reset_input_buffer()
         ser.readline()
-        for _ in range(3):
+        for _ in range(attempts):
             line = ser.readline()
             if not line:
                 raise TimeoutError(f"No data received from {port}")
-            data = parse_json_line(line)
+            try:
+                data = parse_json_line(line)
+            except (ValueError, json.JSONDecodeError):
+                continue
             if data.get("carbonDioxide", 0) != 0:
                 return {
                     "co2": round(data["carbonDioxide"]),
                     "temperature": round(data["temperature"], 1),
                     "humidity": round(data["relativeHumidity"], 1),
                 }
-    raise ValueError("CO2 sensor returned only zero readings")
+    raise ValueError("CO2 sensor returned no valid readings")
 
 
 def read_iaq(port):
