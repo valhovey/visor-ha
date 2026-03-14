@@ -2,11 +2,14 @@
 
 from ha_mqtt_discoverable import Settings, DeviceInfo
 from ha_mqtt_discoverable.sensors import Sensor, SensorInfo
+import paho.mqtt.client as paho
+from paho.mqtt.enums import CallbackAPIVersion
 import serial
 import json
 
 BAUD = 9600
 SERIAL_TIMEOUT = 5
+JSON_DECODER = json.JSONDecoder()
 
 SENSOR_DEFS = [
     # (key,           name,          device_class,                        unit)
@@ -26,6 +29,15 @@ def get_config():
         return json.load(file)
 
 
+def make_mqtt_client(config):
+    """Create and connect a single shared paho MQTT client."""
+    client = paho.Client(callback_api_version=CallbackAPIVersion.VERSION2)
+    client.username_pw_set(config["mqtt_username"], config["mqtt_password"])
+    client.connect(config["mqtt_host"], config.get("mqtt_port", 1883))
+    client.loop_start()
+    return client
+
+
 def build_sensors(mqtt_settings, device):
     sensors = {}
     for key, name, device_class, unit in SENSOR_DEFS:
@@ -39,6 +51,15 @@ def build_sensors(mqtt_settings, device):
     return sensors
 
 
+def parse_json_line(line):
+    text = line.decode(errors="replace").strip()
+    start = text.find("{")
+    if start == -1:
+        raise ValueError(f"No JSON object found in: {text!r}")
+    obj, _ = JSON_DECODER.raw_decode(text, start)
+    return obj
+
+
 def read_serial_json(port):
     """Open a serial port, discard the first (possibly partial) line, and
     return the next complete line parsed as JSON."""
@@ -48,7 +69,7 @@ def read_serial_json(port):
         line = ser.readline()
         if not line:
             raise TimeoutError(f"No data received from {port}")
-        return json.loads(line.decode(errors="replace").strip())
+        return parse_json_line(line)
 
 
 def read_particulate(port):
@@ -70,7 +91,7 @@ def read_gas(port):
             line = ser.readline()
             if not line:
                 raise TimeoutError(f"No data received from {port}")
-            data = json.loads(line.decode(errors="replace").strip())
+            data = parse_json_line(line)
             if data.get("carbonDioxide", 0) != 0:
                 return {
                     "co2": round(data["carbonDioxide"]),
@@ -110,10 +131,11 @@ def publish(sensors, readings):
 if __name__ == "__main__":
     config = get_config()
 
+    client = make_mqtt_client(config)
+
     mqtt_settings = Settings.MQTT(
         host=config["mqtt_host"],
-        username=config["mqtt_username"],
-        password=config["mqtt_password"],
+        client=client,
     )
 
     device = DeviceInfo(
@@ -127,3 +149,6 @@ if __name__ == "__main__":
     readings = read_all_sensors(config)
     publish(sensors, readings)
     print(readings)
+
+    client.disconnect()
+    client.loop_stop()
