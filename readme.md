@@ -1,0 +1,3 @@
+# Visor - Home Assistant
+
+My first air quality project involved hooking up various sensors to a server over serial, combining the data, and making it available somehow. Over the years, this has morphed into a proxy to forward the data over MQTT to Home Assistant. This version of the project improves [on the original](https://github.com/valhovey/visor-mqtt) by using the Python Home Assistant MQTT library `ha-mqtt-discoverable` to add units and easier processing of device/entity relationships which previously were managed manually and did not fully conform to Home Assistant standards (air quality was not in a compatible unit with other sensors I have, for instance).

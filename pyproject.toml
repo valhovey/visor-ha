@@ -1,0 +1,10 @@
+[project]
+name = "visor-ha"
+version = "0.1.0"
+description = "Script to publish Air Quality data over MQTT"
+readme = "readme.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyserial==3.5",
+    "ha-mqtt-discoverable==0.23.0"
+]

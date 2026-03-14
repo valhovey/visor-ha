@@ -1,0 +1,10 @@
+{
+  "smoke-path": "/dev/serial/by-id/TODO",
+  "air-path": "/dev/serial/by-id/TODO",
+  "co2-path": "/dev/serial/by-id/TODO",
+  "baudrate": 9600,
+  "mqtt_host": "192.168.100.76",
+  "mqtt_port": 1883,
+  "mqtt_username": "homeassistant",
+  "mqtt_password": "butts"
+}
