@@ -30,7 +30,6 @@ def get_config():
 
 
 def make_mqtt_client(config):
-    """Create and connect a single shared paho MQTT client."""
     client = paho.Client(callback_api_version=CallbackAPIVersion.VERSION2)
     client.username_pw_set(config["mqtt_username"], config["mqtt_password"])
     client.connect(config["mqtt_host"], config.get("mqtt_port", 1883))
@@ -52,8 +51,6 @@ def build_sensors(mqtt_settings, device):
 
 
 def parse_json_line(line):
-    """Extract the first JSON object from a serial line, tolerating
-    leading garbage or concatenated trailing data."""
     text = line.decode(errors="replace").strip()
     start = text.find("{")
     if start == -1:
@@ -63,9 +60,6 @@ def parse_json_line(line):
 
 
 def read_serial_json(port, attempts=4):
-    """Read lines from a serial port until one parses as valid JSON.
-    The first line after a buffer flush is always discarded since it
-    may be a partial mid-transmission fragment."""
     with serial.Serial(port, BAUD, timeout=SERIAL_TIMEOUT) as ser:
         ser.reset_input_buffer()
         ser.readline()
@@ -90,8 +84,6 @@ def read_particulate(port):
 
 
 def read_gas(port, attempts=5):
-    """Read CO2/temperature/humidity.  Retries to skip both partial
-    serial lines and the initial zero-value startup readings."""
     with serial.Serial(port, BAUD, timeout=SERIAL_TIMEOUT) as ser:
         ser.reset_input_buffer()
         ser.readline()
