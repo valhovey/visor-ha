@@ -1,0 +1,18 @@
+[Unit]
+Description=Visor Air Quality Monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=visor
+Group=dialout
+WorkingDirectory=/opt/visor-ha
+ExecStart=/opt/visor-ha/.venv/bin/python /opt/visor-ha/server.py
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
