@@ -14,7 +14,7 @@ from paho.mqtt.enums import CallbackAPIVersion
 
 DEFAULT_BAUD = 9600
 DEFAULT_READ_INTERVAL = 10
-SERIAL_TIMEOUT = 2
+SERIAL_TIMEOUT = 3
 JSON_DECODER = json.JSONDecoder()
 CONFIG_PATH = Path(__file__).parent / "config.json"
 
